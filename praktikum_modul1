@@ -1,0 +1,52 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 1. Definisi Fungsi Crisp
+def crisp_critical(x):
+    return 1 if x >= 8 else 0
+
+# 2. Definisi Fungsi Fuzzy
+def fuzzy_critical(x):
+    if x < 4:
+        return 0.0
+    elif 4 <= x <= 12:
+        return (x - 4) / 8.0
+    else:
+        return 1.0
+
+# 3. Data Uji (Waktu tunggu dalam jam)
+test_data = [2, 4, 6, 7.9, 8.0, 8.1, 10, 12, 16]
+
+# 4. Kalkulasi Nilai
+results = []
+for x in test_data:
+    results.append({
+        'Waktu Tunggu (Jam)': x,
+        'Crisp (μ)': crisp_critical(x),
+        'Fuzzy (μ)': round(fuzzy_critical(x), 4)
+    })
+
+# Format ke DataFrame
+df = pd.DataFrame(results)
+print(df.to_string(index=False))
+
+# 5. Visualisasi Grafik
+x_continuous = np.linspace(0, 16, 500)
+y_crisp = [crisp_critical(x) for x in x_continuous]
+y_fuzzy = [fuzzy_critical(x) for x in x_continuous]
+
+plt.figure(figsize=(9, 4.5))
+plt.plot(x_continuous, y_crisp, 'r--', label='Crisp (Threshold = 8 jam)', linewidth=2)
+plt.plot(x_continuous, y_fuzzy, 'b-', label='Fuzzy (Linier 4-12 jam)', linewidth=2)
+plt.scatter(test_data, [crisp_critical(x) for x in test_data], color='red', zorder=5)
+plt.scatter(test_data, [fuzzy_critical(x) for x in test_data], color='blue', zorder=5)
+
+plt.title('Perbandingan Logika Crisp vs Fuzzy pada Prioritas Tiket')
+plt.xlabel('Waktu Tunggu (Jam)')
+plt.ylabel('Derajat Keanggotaan (μ)')
+plt.grid(True, linestyle=':', alpha=0.6)
+plt.legend()
+plt.tight_layout()
+plt.savefig('grafik_perbandingan.png', dpi=300)
+plt.show()
