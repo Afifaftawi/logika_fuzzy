@@ -1,19 +1,25 @@
+# ==========================================================
+# SISTEM PENENTUAN NILAI AKHIR SELEKSI PENERIMAAN MAHASISWA BARU
+# BERBASIS LOGIKA FUZZY
+# Praktikum 6: Fuzzy Rule dan Knowledge Base
+#
+# Cakupan modul ini: basis aturan dan perhitungan firing strength.
+# (Fuzzifikasi, agregasi, dan defuzzifikasi dikerjakan di modul berikutnya.)
+# ==========================================================
+
+
+# ==========================================================
+# 1. KELAS STRUKTUR ATURAN FUZZY
+# ==========================================================
 class FuzzyRule:
     def __init__(self, rule_id, antecedent, consequent, operator='AND'):
-        """
-        antecedent: dict berisi pasangan {'nama_variabel': 'nama_label'}
-        consequent: dict berisi {'nama_variabel': 'nama_label'}
-        """
-        self.rule_id = rule_id
-        self.antecedent = antecedent
-        self.consequent = consequent
+        self.rule_id = rule_id          # nama aturan, mis. "R1"
+        self.antecedent = antecedent    # bagian IF: {variabel: label}
+        self.consequent = consequent    # bagian THEN: {variabel: label}
         self.operator = operator.upper()
 
     def hitung_firing_strength(self, derajat_fuzzifikasi):
-        """
-        Menghitung nilai firing strength (alpha-predikat)
-        menggunakan operator Zadeh (AND = min, OR = max)
-        """
+        """Hitung alpha: gabungan derajat keanggotaan semua syarat IF."""
         nilai_derajat = []
         for var_nama, label_nama in self.antecedent.items():
             deg = derajat_fuzzifikasi[var_nama].get(label_nama, 0.0)
@@ -30,65 +36,66 @@ class FuzzyRule:
             raise ValueError(f"Operator {self.operator} tidak dikenali.")
 
     def __str__(self):
-        syarat = f" {self.operator} ".join([f"{var} is {lbl}" for var, lbl in self.antecedent.items()])
-        hasil = ", ".join([f"{var} is {lbl}" for var, lbl in self.consequent.items()])
+        syarat = f" {self.operator} ".join(
+            [f"{var} is {lbl}" for var, lbl in self.antecedent.items()])
+        hasil = ", ".join(
+            [f"{var} is {lbl}" for var, lbl in self.consequent.items()])
         return f"[{self.rule_id}] IF {syarat} THEN {hasil}"
 
+
+# ==========================================================
+# 2. BASIS ATURAN (RULE BASE) NILAI AKHIR SELEKSI
+#    Variabel input : rapor, tes_tulis  -> Rendah, Sedang, Tinggi
+#    Variabel output: nilai_akhir       -> Rendah, Sedang, Tinggi
+#    Jumlah aturan  : 3 x 3 = 9
+# ==========================================================
 rule_base = [
-    FuzzyRule("R1", {"suhu": "Dingin", "cpu": "Ringan"}, {"kipas": "Lambat"}),
-    FuzzyRule("R2", {"suhu": "Dingin", "cpu": "Sedang"}, {"kipas": "Lambat"}),
-    FuzzyRule("R3", {"suhu": "Dingin", "cpu": "Berat"}, {"kipas": "Sedang"}),
-    FuzzyRule("R4", {"suhu": "Normal", "cpu": "Ringan"}, {"kipas": "Lambat"}),
-    FuzzyRule("R5", {"suhu": "Normal", "cpu": "Sedang"}, {"kipas": "Sedang"}),
-    FuzzyRule("R6", {"suhu": "Normal", "cpu": "Berat"}, {"kipas": "Cepat"}),
-    FuzzyRule("R7", {"suhu": "Panas", "cpu": "Ringan"}, {"kipas": "Sedang"}),
-    FuzzyRule("R8", {"suhu": "Panas", "cpu": "Sedang"}, {"kipas": "Cepat"}),
-    FuzzyRule("R9", {"suhu": "Panas", "cpu": "Berat"}, {"kipas": "Cepat"}),
+    FuzzyRule("R1", {"rapor": "Rendah", "tes_tulis": "Rendah"}, {"nilai_akhir": "Rendah"}),
+    FuzzyRule("R2", {"rapor": "Rendah", "tes_tulis": "Sedang"}, {"nilai_akhir": "Rendah"}),
+    FuzzyRule("R3", {"rapor": "Rendah", "tes_tulis": "Tinggi"}, {"nilai_akhir": "Sedang"}),
+    FuzzyRule("R4", {"rapor": "Sedang", "tes_tulis": "Rendah"}, {"nilai_akhir": "Rendah"}),
+    FuzzyRule("R5", {"rapor": "Sedang", "tes_tulis": "Sedang"}, {"nilai_akhir": "Sedang"}),
+    FuzzyRule("R6", {"rapor": "Sedang", "tes_tulis": "Tinggi"}, {"nilai_akhir": "Tinggi"}),
+    FuzzyRule("R7", {"rapor": "Tinggi", "tes_tulis": "Rendah"}, {"nilai_akhir": "Sedang"}),
+    FuzzyRule("R8", {"rapor": "Tinggi", "tes_tulis": "Sedang"}, {"nilai_akhir": "Tinggi"}),
+    FuzzyRule("R9", {"rapor": "Tinggi", "tes_tulis": "Tinggi"}, {"nilai_akhir": "Tinggi"}),
 ]
 
-print("=" * 60)
-print("MASUKKAN NILAI DERAJAT FUZZIFIKASI INPUT (Rentang 0.0 s.d 1.0)")
-print("=" * 60)
 
-try:
-    print("\n--- Variabel Suhu Ruang ---")
-    suhu_dingin = float(input("Masukkan derajat Suhu [Dingin]: "))
-    suhu_normal = float(input("Masukkan derajat Suhu [Normal]: "))
-    suhu_panas  = float(input("Masukkan derajat Suhu [Panas] : "))
+# ==========================================================
+# 3. DATA UJI (DERAJAT KEANGGOTAAN SUDAH DIKETAHUI)
+#    Contoh calon mahasiswa: rapor mendekati Sedang/Tinggi,
+#    tes tulis dominan Sedang.
+# ==========================================================
+derajat_input = {
+    "rapor":     {"Rendah": 0.0, "Sedang": 0.5,  "Tinggi": 0.5},
+    "tes_tulis": {"Rendah": 0.0, "Sedang": 0.75, "Tinggi": 0.25},
+}
 
-    print("\n--- Variabel Beban CPU ---")
-    cpu_ringan = float(input("Masukkan derajat CPU [Ringan]: "))
-    cpu_sedang = float(input("Masukkan derajat CPU [Sedang]: "))
-    cpu_berat  = float(input("Masukkan derajat CPU [Berat] : "))
 
-    derajat_input_manual = {
-        "suhu": {"Dingin": suhu_dingin, "Normal": suhu_normal, "Panas": suhu_panas},
-        "cpu": {"Ringan": cpu_ringan, "Sedang": cpu_sedang, "Berat": cpu_berat}
-    }
-
-except ValueError:
-    print("\n[Kesalahan] Harap masukkan angka desimal yang valid (contoh: 0.5 atau 1.0).")
-    exit()
-    
-print("\n" + "=" * 75)
-print("HASIL EVALUASI BASIS ATURAN FUZZY - KIPAS PENDINGIN SERVER")
-print("=" * 75)
+# ==========================================================
+# 4. EVALUASI SELURUH ATURAN
+# ==========================================================
+print("=" * 86)
+print("HASIL EVALUASI BASIS ATURAN FUZZY - NILAI AKHIR SELEKSI MAHASISWA BARU")
+print("=" * 86)
 
 aturan_aktif = []
 for rule in rule_base:
-    alpha = rule.hitung_firing_strength(derajat_input_manual)
-    output_var = list(rule.consequent.keys())[0]
-    output_lbl = rule.consequent[output_var]
+    alpha = rule.hitung_firing_strength(derajat_input)
+    out_var = list(rule.consequent.keys())[0]
+    out_lbl = rule.consequent[out_var]
     status = f"AKTIF (alpha = {alpha:.2f})" if alpha > 0 else "NONAKTIF"
     print(f"{rule} --> {status}")
     if alpha > 0:
-        aturan_aktif.append((rule.rule_id, output_lbl, alpha))
+        aturan_aktif.append((rule.rule_id, out_lbl, alpha))
 
-print("\n" + "=" * 75)
-print("RINGKASAN ATURAN YANG TEPICU (FIRING RULES):")
-print("=" * 75)
-if aturan_aktif:
-    for r_id, konklusi, alpha in aturan_aktif:
-        print(f" - {r_id:<4} : Kecepatan Kipas = {konklusi:<8} dengan alpha = {alpha:.2f}")
-else:
-    print(" Tidak ada aturan yang aktif (semua alpha = 0.0).")
+print("\n" + "=" * 86)
+print("RINGKASAN ATURAN YANG TERPICU (FIRING RULES):")
+print("=" * 86)
+for r_id, konklusi, alpha in aturan_aktif:
+    print(f" - {r_id:<4}: Nilai Akhir = {konklusi:<8} dengan alpha = {alpha:.2f}")
+
+if not aturan_aktif:
+    print(" Tidak ada aturan yang terpicu. Periksa kelengkapan rule base "
+          "dan fungsi keanggotaan.")
